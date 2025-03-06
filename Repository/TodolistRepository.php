@@ -17,33 +17,54 @@ namespace Repository {
     {
         public array $todolist = array();
 
+        private \PDO $connection;
+
+        public function __construct(\PDO $connection)
+        {
+            $this->connection = $connection;
+        }
+
         public function save(Todolist $todolist): void
         {
-            $number = sizeof($this->todolist) + 1;
-            $this->todolist[$number] = $todolist;
+            $sql = "INSERT INTO todolist(todo) VALUES (?)";
+            $statement = $this->connection->prepare($sql);
+            $statement->execute([$todolist->getTodo()]);
         }
 
         public function remove(int $number): bool
         {
+            $sql = "SELECT id FROM todolist WHERE id = ?";
+            $statement = $this->connection->prepare($sql);
+            $statement->execute([$number]);
 
-            if ($number > sizeof($this->todolist)) {
+            if ($statement->fetch()) {
+                $sql = "DELETE FROM todolist WHERE id = ?";
+                $statement = $this->connection->prepare($sql);
+                $statement->execute([$number]);
+
+                return true;
+            } else {
                 return false;
             }
-
-            for ($i = $number; $i <= sizeof($this->todolist); $i++) {
-                if ($i == sizeof($this->todolist)) {
-                    unset($this->todolist[$i]);
-                } else {
-                    $this->todolist[$i] = $this->todolist[$i + 1];
-                }
-            }
-
-            return true;
         }
 
         public function findAll(): array
         {
-            return $this->todolist;
+            $sql = "SELECT id, todo FROM todolist";
+            $statement = $this->connection->prepare($sql);
+            $statement->execute();
+
+            $result = [];
+
+            foreach ($statement as $row) {
+                $todolist = new Todolist();
+                $todolist->setId($row['id']);
+                $todolist->setTodo($row['todo']);
+
+                $result[] = $todolist;
+            }
+
+            return $result;
         }
     }
 }
